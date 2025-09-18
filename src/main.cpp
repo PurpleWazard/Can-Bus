@@ -29,12 +29,42 @@ MCP2515 mcp2515(CS, 10000000, &hspi);
 //
 // single frame exa
 // id ???  [0x04, 0x41, 0xFB, 0x23, 0x11, 0x33, 0x00, 0x00]
-
-void hahah(struct can_frame B) {
+//
+// FF id ??? [0x12, 0xFF, data ...]
+//
+//
+//
+String dtcCode(uint8_t high, uint8_t low) {
 
   char codecat;
-  uint8_t codenum;
-  String code;
+  uint8_t Bcodecat;
+  uint16_t codenum;
+
+  Bcodecat = high >> 4;
+
+  switch (Bcodecat) {
+  case 0x0: // P
+    codecat = 'P';
+    break;
+  case 0x4: // C
+    codecat = 'C';
+    break;
+  case 0x8: // B
+    codecat = 'B';
+    break;
+  case 0xC: // U
+    codecat = 'U';
+    break;
+  }
+
+  codenum = ((high & 0b00001111) << 8) | low;
+
+  String string = (String)codecat + (String)codenum;
+  Serial.println(string);
+  return string;
+}
+
+void hahah(struct can_frame B) {
 
   uint8_t hb = (B.data[0] & 0xF0) >> 4;
   uint8_t lb = B.data[0] & 0x0F;
@@ -42,34 +72,41 @@ void hahah(struct can_frame B) {
   if (hb == 0) {
     uint8_t Ndtcs = lb / 2;
     uint8_t Nbyte;
-    for (int i; i < Ndtcs; i++) {
+    for (int i = 0; i < Ndtcs; i++) {
       uint8_t high = B.data[2 + (i * 2)];
       uint8_t low = B.data[3 + (i * 2)];
-
-      high = high >> 4;
-
-      switch (high) {
-      case 0x0: // P
-        codecat = 'P';
-        break;
-      case 0x4: // C
-        codecat = 'C';
-        break;
-      case 0x8: // B
-        codecat = 'B';
-        break;
-      case 0xC: // U
-        codecat = 'U';
-        break;
-      }
-
-      code = (String)codecat + (String)low;
-      Serial.println(code);
+      dtcCode(high, low);
     }
 
   } else if (hb == 1) {
-    uint16_t length = (lb << 8) & B.data[1];
+    uint16_t length = (lb << 8) | B.data[1];
+    Serial.print(length / 2);
+    Serial.println(" DTCs ");
+    uint16_t lengthTracker = length;
+    dtcCode(B.data[2], B.data[3]);
+    length -= 2;
+    dtcCode(B.data[4], B.data[5]);
+    length -= 2;
+    dtcCode(B.data[6], B.data[7]);
+    length -= 2;
+    if (lengthTracker > 0) {
+      uint8_t index = 1;
+      struct can_frame msg;
+      MCP2515::ERROR error = MCP2515::ERROR_OK;
+      while (lengthTracker > 0) {
+        if (mcp2515.readMessage(&msg) == MCP2515::ERROR_OK) {
+          if ((msg.data[0] >> 4) == 0x2 && (msg.data[0] & 0x0F) == index){
+            index++;
 
+
+
+
+          }
+        }
+      }
+    }
+
+  } else if (hb == 2) {
   }
 }
 
