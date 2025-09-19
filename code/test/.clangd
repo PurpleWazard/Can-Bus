@@ -1,0 +1,12 @@
+CompileFlags:
+  Add:
+    [
+      "-isysroot=/home/wazard/.platformio/packages/toolchain-xtensa-esp32/xtensa-esp32-elf",
+    ]
+  Remove:
+    [
+      -fno-tree-switch-conversion,
+      -mtext-section-literals,
+      -mlongcalls,
+      -fstrict-volatile-bitfields,
+    ]
